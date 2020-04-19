@@ -80,9 +80,33 @@ albumLoop(Result,[Hem|T],Y):-
 
 
 
-% trackDistance(+TrackId1, +TrackId2, -Score) 5 points
-% albumDistance(+AlbumId1, +AlbumId2, -Score) 5 points
-% artistDistance(+ArtistName1, +ArtistName2, -Score) 5 points
+multiplyLoop([],[],[]).
+multiplyLoop([Head|Tail], [H1|T1], Result):-
+    Y is Head*H1,
+    multiplyLoop(Tail,T1,ResultTail),
+    Result = [Y|ResultTail].
+
+%trackDistance(+TrackId1, +TrackId2, -Score) 5 points
+trackDistance(TrackId1, TrackId2, Score):-
+    track(TrackId1,_,_,_,D1), track(TrackId2,_,_,_,D2),
+    filter_features(D1,Filtered1),filter_features(D2,Filtered2), distanceFinder(Score, Filtered1,Filtered2).
+
+distanceFinder(Result, X,Y):-
+    divideLoop(X,-1,Z), sumLoop(Y,Z,T),
+    multiplyLoop(T,T,K), sumElementList(K,A), Result is sqrt(A).    
+
+sumElementList([], 0).
+sumElementList([Head | Tail], Total) :-
+    sumElementList(Tail, Sum1),
+    Total = Head + Sum1.
+
+%albumDistance(+AlbumId1, +AlbumId2, -Score) 5 points
+albumDistance(AlbumId1, AlbumId2, Score):-
+    albumFeatures(AlbumId1,Feature1), albumFeatures(AlbumId2,Feature2), distanceFinder(Score,Feature1,Feature2). 
+%artistDistance(+ArtistName1, +ArtistName2, -Score) 5 points
+artistDistance(ArtistName1, ArtistName2, Score):-
+    artistFeatures(ArtistName1,Feature1), artistFeatures(ArtistName2,Feature2), distanceFinder(Score,Feature1,Feature2). 
+
 
 % findMostSimilarTracks(+TrackId, -SimilarIds, -SimilarNames) 10 points
 % findMostSimilarAlbums(+AlbumId, -SimilarIds, -SimilarNames) 10 points
