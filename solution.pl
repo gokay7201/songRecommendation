@@ -122,7 +122,7 @@ artistDistance(ArtistName1, ArtistName2, Score):-
 %findMostSimilarTracks(+TrackId, -SimilarIds, -SimilarNames) 10 points
 findMostSimilarTracks(TrackId, SimilarIds, SimilarNames):-
     findall(X-Y, trackDistance(TrackId,Y,X), Term), sort(0,@=<, Term, [_|T]),
-    showIDs(SimilarIds, T,1), showNames(SimilarNames, T,0).
+    showIDs(SimilarIds, T,0), showNames(SimilarNames, T,0).
 showIDs([],_, 30).
 showIDs(Result, [_-M|T], X):-
     Y is X+1, showIDs(Ret, T,Y), Result = [M|Ret]. 
@@ -131,10 +131,11 @@ showNames(Result, [_-M|T], X):-
     Y is X+1, track(M,B,_,_,_),
     showNames(Ret, T,Y), Result = [B|Ret].
 
+% kendisiyle olan şeyini başka bir çıkarma yöntemi bulmalıyız
 %findMostSimilarAlbums(+AlbumId, -SimilarIds, -SimilarNames) 10 points
 findMostSimilarAlbums(AlbumId, SimilarIds, SimilarNames):-
     findall(X-Y, albumDistance(AlbumId,Y,X), Term), sort(0,@=<, Term, [_|T]),
-    showIDs(SimilarIds, T,1), showAlbumNames(SimilarNames, T,0).
+    showIDs(SimilarIds, T,0), showAlbumNames(SimilarNames, T,0).
 showAlbumNames([],_, 30).
 showAlbumNames(Result, [_-M|T], X):-
     Y is X+1, album(M,B,_,_),
@@ -149,6 +150,7 @@ sort(0,@=<, Term, [_|T]), showIDs(SimilarArtists, T,0).
 filterExplicitTracks(TrackList, FilteredTracks) :-
     findall(X, (member(X,TrackList), track(X,_,_,_,[0|_])), FilteredTracks).
 
+% duplicate olanları yok etmek lazım
 %getTrackGenre(+TrackId, -Genres) 5 points
 getTrackGenre(TrackId, Genres):- track(TrackId,_,Artists,_,_), artistLoop(Result, Artists),flatten(Result, Genres).
 artistLoop([],[]).
@@ -157,4 +159,26 @@ artistLoop(Result, [H|T]):-
     Result = [K|Rem].
 
 
-% discoverPlaylist(+LikedGenres, +DislikedGenres, +Features, +FileName, -Playlist) 30 points
+%discoverPlaylist(+LikedGenres, +DislikedGenres, +Features, +FileName, -Playlist) 30 points
+discoverPlaylist(LikedGenres, DislikedGenres, Features, Playlist):- 
+    likedOnes(LikedGenres, Res1), flatten(Res1,Res2), list_to_set(Res2,Res3),
+    dislikedOnes(Res3, DislikedGenres, Res4),flatten(Res4,Res5),list_to_set(Res5,Res6),
+    subtract(Res3, Res6, Res7), distanceLoop(Res7, Features, Res8), keysort(Res8,Res9) ,showIDs(Playlist, Res9,0).
+
+distanceLoop([],_,[]).
+distanceLoop([H|T], Features, Result):- track(H,_,_,_,L), distanceLoop(T,Features, Remi),
+ filter_features(L,L1), distanceFinder(Rex, Features, L1), Result = [Rex-H|Remi].    
+
+likedOnes([],_).
+likedOnes([H|T], Result):-
+    subGenre(H, List), findall(X,(getTrackGenre(X, Genres), member(Y,List), member(Y,Genres)), Final),
+    likedOnes(T,Rez), Result = [Final|Rez].
+dislikedOnes(_,[],_).
+dislikedOnes(Alist,[H|T], Result) :- subGenre(H,List),
+    findall(X,(getTrackGenre(X, Genres), member(Y,List), member(Y,Genres), member(X,Alist)),Final),
+     dislikedOnes(Alist,T,Rez), Result = [Final|Rez].
+
+subGenre(OneGenre, List):-
+    findall(L, artist(_,L,_), WholeGenres), flatten(WholeGenres,Flatten),
+    list_to_set(Flatten, Setted), findall(X,(member(X,Setted), sub_string(X,_,_,_,OneGenre)), List).
+
