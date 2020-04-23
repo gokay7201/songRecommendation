@@ -122,7 +122,7 @@ artistDistance(ArtistName1, ArtistName2, Score):-
 %findMostSimilarTracks(+TrackId, -SimilarIds, -SimilarNames) 10 points
 findMostSimilarTracks(TrackId, SimilarIds, SimilarNames):-
     findall(X-Y, trackDistance(TrackId,Y,X), Term), sort(0,@=<, Term, [_|T]),
-    showIDs(SimilarIds, T,1), showNames(SimilarNames, T,1).
+    showIDs(SimilarIds, T,1), showNames(SimilarNames, T,0).
 showIDs([],_, 30).
 showIDs(Result, [_-M|T], X):-
     Y is X+1, showIDs(Ret, T,Y), Result = [M|Ret]. 
@@ -134,7 +134,7 @@ showNames(Result, [_-M|T], X):-
 %findMostSimilarAlbums(+AlbumId, -SimilarIds, -SimilarNames) 10 points
 findMostSimilarAlbums(AlbumId, SimilarIds, SimilarNames):-
     findall(X-Y, albumDistance(AlbumId,Y,X), Term), sort(0,@=<, Term, [_|T]),
-    showIDs(SimilarIds, T,1), showAlbumNames(SimilarNames, T,1).
+    showIDs(SimilarIds, T,1), showAlbumNames(SimilarNames, T,0).
 showAlbumNames([],_, 30).
 showAlbumNames(Result, [_-M|T], X):-
     Y is X+1, album(M,B,_,_),
@@ -142,11 +142,19 @@ showAlbumNames(Result, [_-M|T], X):-
 
 %findMostSimilarArtists(+ArtistName, -SimilarArtists) 10 points
 findMostSimilarArtists(ArtistName, SimilarArtists):-findall(X-Y, artistDistance(ArtistName,Y,X), Term),
-sort(0,@=<, Term, [_|T]), showIDs(SimilarArtists, T,1).
+sort(0,@=<, Term, [_|T]), showIDs(SimilarArtists, T,0).
 
 
-% filterExplicitTracks(+TrackList, -FilteredTracks) 5 points
+%filterExplicitTracks(+TrackList, -FilteredTracks) 5 points
+filterExplicitTracks(TrackList, FilteredTracks) :-
+    findall(X, (member(X,TrackList), track(X,_,_,_,[0|_])), FilteredTracks).
 
-% getTrackGenre(+TrackId, -Genres) 5 points
+%getTrackGenre(+TrackId, -Genres) 5 points
+getTrackGenre(TrackId, Genres):- track(TrackId,_,Artists,_,_), artistLoop(Result, Artists),flatten(Result, Genres).
+artistLoop([],[]).
+artistLoop(Result, [H|T]):-
+    artist(H,K,_), artistLoop(Rem, T),
+    Result = [K|Rem].
+
 
 % discoverPlaylist(+LikedGenres, +DislikedGenres, +Features, +FileName, -Playlist) 30 points
