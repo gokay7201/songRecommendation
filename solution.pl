@@ -29,13 +29,15 @@ filter_features_rec([FeatHead|FeatTail], [Head|Tail], FilteredFeatures) :-
 
 
  %getArtistTracks(+ArtistName, -TrackIds, -TrackNames).
- getArtistTracks(ArtistName, TrackIds, TrackNames) :- artist(ArtistName,_,Ho)
-                                , getAlbumes(TrackIds, Ho,0)  , getAlbumes(TrackNames,Ho,1).
+ getArtistTracks(ArtistName, TrackIds, TrackNames) :- artist(ArtistName,_,Ho),
+    getAlbumes(Pro1, Ho,0), getAlbumes(Pro2,Ho,1),
+    flatten(Pro1,TrackIds), flatten(Pro2, TrackNames).
 
 getAlbumes([],[],_).
 getAlbumes(List,[H|T],X):- album(H,_,_,L),
-getTracks(List,L,X),
- getAlbumes(_,T,X).
+    getTracks(Lisk,L,X),
+    getAlbumes(Bebe,T,X),
+    List = [Lisk|Bebe].
 
 getTracks([],[],_).
 getTracks(Lisp, [H|T],X):-
@@ -43,7 +45,7 @@ getTracks(Lisp, [H|T],X):-
     getTracks(Listem, T,X),
     Lisp = [Y|Listem].
 trackData(H,H,0).
-trackData(Y,H,1):-track(H,Y,_,_,_).
+trackData(Y,H,1):-track(H,Y,_,_,_).  
 
 %albumFeatures(+AlbumId, -AlbumFeatures).
 albumFeatures(AlbumId,AlbumFeatures):-
@@ -67,16 +69,25 @@ divideLoop([Head|Tail], K, Result):-
     Y is Head/K,
     divideLoop(Tail,K,ResultTail),
     Result = [Y|ResultTail].    
+multiplyConstant([],_,[]).
+multiplyConstant([Head|Tail], K, Result):-
+    Y is Head*K,
+    multiplyConstant(Tail,K,ResultTail),
+    Result = [Y|ResultTail].
+
 
 %artistFeatures(+ArtistName, -ArtistFeatures) 5 points
 artistFeatures(ArtistName, ArtistFeatures):- 
     artist(ArtistName,_,T),albumLoop(Hello, T,X), divideLoop(Hello,X,ArtistFeatures).
 
-albumLoop(Filter,[H|[]],1):- albumFeatures(H,Filter).
+albumLoop(Out,[H|[]],Felt):-
+    albumFeatures(H,Filter), album(H,_,_,K),
+    length(K, Felt), multiplyConstant(Filter, Felt, Out).
 albumLoop(Result,[Hem|T],Y):- 
     albumFeatures(Hem,Filtered),
-    albumLoop(Res,T, X), Y is X+1,
-    sumLoop(Filtered,Res,Result).
+    album(Hem,_,_,P), length(P,Feel), multiplyConstant(Filtered, Feel, And),
+    albumLoop(Res,T, X), Y is X + Feel ,
+    sumLoop(And,Res,Result).
 
 
 
@@ -108,9 +119,31 @@ artistDistance(ArtistName1, ArtistName2, Score):-
     artistFeatures(ArtistName1,Feature1), artistFeatures(ArtistName2,Feature2), distanceFinder(Score,Feature1,Feature2). 
 
 
-% findMostSimilarTracks(+TrackId, -SimilarIds, -SimilarNames) 10 points
-% findMostSimilarAlbums(+AlbumId, -SimilarIds, -SimilarNames) 10 points
-% findMostSimilarArtists(+ArtistName, -SimilarArtists) 10 points
+%findMostSimilarTracks(+TrackId, -SimilarIds, -SimilarNames) 10 points
+findMostSimilarTracks(TrackId, SimilarIds, SimilarNames):-
+    findall(X-Y, trackDistance(TrackId,Y,X), Term), sort(0,@=<, Term, [_|T]),
+    showIDs(SimilarIds, T,1), showNames(SimilarNames, T,1).
+showIDs([],_, 30).
+showIDs(Result, [_-M|T], X):-
+    Y is X+1, showIDs(Ret, T,Y), Result = [M|Ret]. 
+showNames([],_, 30).
+showNames(Result, [_-M|T], X):-
+    Y is X+1, track(M,B,_,_,_),
+    showNames(Ret, T,Y), Result = [B|Ret].
+
+%findMostSimilarAlbums(+AlbumId, -SimilarIds, -SimilarNames) 10 points
+findMostSimilarAlbums(AlbumId, SimilarIds, SimilarNames):-
+    findall(X-Y, albumDistance(AlbumId,Y,X), Term), sort(0,@=<, Term, [_|T]),
+    showIDs(SimilarIds, T,1), showAlbumNames(SimilarNames, T,1).
+showAlbumNames([],_, 30).
+showAlbumNames(Result, [_-M|T], X):-
+    Y is X+1, album(M,B,_,_),
+    showAlbumNames(Ret, T,Y), Result = [B|Ret].
+
+%findMostSimilarArtists(+ArtistName, -SimilarArtists) 10 points
+findMostSimilarArtists(ArtistName, SimilarArtists):-findall(X-Y, artistDistance(ArtistName,Y,X), Term),
+sort(0,@=<, Term, [_|T]), showIDs(SimilarArtists, T,1).
+
 
 % filterExplicitTracks(+TrackList, -FilteredTracks) 5 points
 
