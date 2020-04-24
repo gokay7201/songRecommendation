@@ -161,24 +161,25 @@ artistLoop(Result, [H|T]):-
 
 %discoverPlaylist(+LikedGenres, +DislikedGenres, +Features, +FileName, -Playlist) 30 points
 discoverPlaylist(LikedGenres, DislikedGenres, Features, Playlist):- 
-    likedOnes(LikedGenres, Res1), flatten(Res1,Res2), list_to_set(Res2,Res3),
-    dislikedOnes(Res3, DislikedGenres, Res4),flatten(Res4,Res5),list_to_set(Res5,Res6),
-    subtract(Res3, Res6, Res7), distanceLoop(Res7, Features, Res8), keysort(Res8,Res9) ,showIDs(Playlist, Res9,0).
+    subGenre(LikedGenres, Other1),subGenre(DislikedGenres, Other2),deneme(Other1, Other2, Res),
+    list_to_set(Res,Res1),distanceLoop(Res1,Features,Final),keysort(Final,Final2) ,showIDs(Playlist, Final2,0).
+
+
+deneme(Liked,Disliked,Result):-
+    findall(X,(
+        getTrackGenre(X,Genres),
+        (isLiked(Genres,Liked), \+ isLiked(Genres,Disliked))
+    ),Result).
 
 distanceLoop([],_,[]).
 distanceLoop([H|T], Features, Result):- track(H,_,_,_,L), distanceLoop(T,Features, Remi),
- filter_features(L,L1), distanceFinder(Rex, Features, L1), Result = [Rex-H|Remi].    
+ filter_features(L,L1), distanceFinder(Rex, Features, L1), Result = [Rex-H|Remi].   
 
-likedOnes([],_).
-likedOnes([H|T], Result):-
-    subGenre(H, List), findall(X,(getTrackGenre(X, Genres), member(Y,List), member(Y,Genres)), Final),
-    likedOnes(T,Rez), Result = [Final|Rez].
-dislikedOnes(_,[],_).
-dislikedOnes(Alist,[H|T], Result) :- subGenre(H,List),
-    findall(X,(getTrackGenre(X, Genres), member(Y,List), member(Y,Genres), member(X,Alist)),Final),
-     dislikedOnes(Alist,T,Rez), Result = [Final|Rez].
 
-subGenre(OneGenre, List):-
+isLiked(Genres,Liked):- (member(X,Genres), member(X,Liked)) .
+
+subGenre([],_).
+subGenre(Genres, List):-
     findall(L, artist(_,L,_), WholeGenres), flatten(WholeGenres,Flatten),
-    list_to_set(Flatten, Setted), findall(X,(member(X,Setted), sub_string(X,_,_,_,OneGenre)), List).
-
+    list_to_set(Flatten, Setted),
+    findall(X,(member(X,Setted),member(Y,Genres) , sub_string(X,_,_,_,Y)), List).
