@@ -152,7 +152,7 @@ filterExplicitTracks(TrackList, FilteredTracks) :-
 
 % duplicate olanları yok etmek lazım
 %getTrackGenre(+TrackId, -Genres) 5 points
-getTrackGenre(TrackId, Genres):- track(TrackId,_,Artists,_,_), artistLoop(Result, Artists),flatten(Result, Genres).
+getTrackGenre(TrackId, Genres):- track(TrackId,_,Artists,_,_), artistLoop(Result, Artists),flatten(Result, Mid), list_to_set(Mid,Genres).
 artistLoop([],[]).
 artistLoop(Result, [H|T]):-
     artist(H,K,_), artistLoop(Rem, T),
@@ -160,10 +160,20 @@ artistLoop(Result, [H|T]):-
 
 
 %discoverPlaylist(+LikedGenres, +DislikedGenres, +Features, +FileName, -Playlist) 30 points
-discoverPlaylist(LikedGenres, DislikedGenres, Features, Playlist):- 
+discoverPlaylist(LikedGenres, DislikedGenres, Features,FileName, Playlist):- 
     subGenre(LikedGenres, Other1),subGenre(DislikedGenres, Other2),deneme(Other1, Other2, Res),
-    list_to_set(Res,Res1),distanceLoop(Res1,Features,Final),keysort(Final,Final2) ,showIDs(Playlist, Final2,0).
+    list_to_set(Res,Res1),distanceLoop(Res1,Features,Final),keysort(Final,Final2) ,showAll(Playlist,Points,Final2,0),
+    nameAndArtist(Names,Artists,Playlist),printPhase(FileName,Playlist,Names,Artists,Points).
 
+showAll([],[],_, 30).
+showAll(Result,Res2 ,[N-M|T], X):-
+    Y is X+1, showAll(Ret, Ret2, T,Y), Result = [M|Ret], Res2=[N|Ret2].
+nameAndArtist([],[],[]).
+nameAndArtist(Names, Artists, [H|T]):-
+    track(H,X,Y,_,_), nameAndArtist(N1,A1,T), Names = [X|N1], Artists = [Y|A1].
+
+printPhase(File, Ids, Names,Artists,Points):- open(File, write, Stream),
+   writeln(Stream, Ids), writeln(Stream,Names), writeln(Stream,Artists),writeln(Stream,Points), close(Stream).
 
 deneme(Liked,Disliked,Result):-
     findall(X,(
