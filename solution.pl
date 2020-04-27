@@ -21,7 +21,7 @@ filter_features_rec([FeatHead|FeatTail], [Head|Tail], FilteredFeatures) :-
         )
     ).
 
- %getArtistTracks(+ArtistName, -TrackIds, -TrackNames).
+%getArtistTracks(+ArtistName, -TrackIds, -TrackNames).
  getArtistTracks(ArtistName, TrackIds, TrackNames) :- artist(ArtistName,_,Ho),
     getAlbumes(Pro1, Ho,0), getAlbumes(Pro2,Ho,1),
     flatten(Pro1,TrackIds), flatten(Pro2, TrackNames).
@@ -108,7 +108,7 @@ artistDistance(ArtistName1, ArtistName2, Score):-
 
 %findMostSimilarTracks(+TrackId, -SimilarIds, -SimilarNames) 
 findMostSimilarTracks(TrackId, SimilarIds, SimilarNames):-
-    findall(X-Y, (trackDistance(TrackId,Y,X),\+(TrackId = Y)), Term), keysort(Term,T),
+    findall(X-Y, (trackDistance(TrackId,Y,X),\+(TrackId = Y)), Term), msort(Term,T),
     showIDs(SimilarIds, T,0), showNames(SimilarNames, T,0).
 showIDs([],_, 30).
 showIDs(Result, [_-M|T], X):-
@@ -120,7 +120,7 @@ showNames(Result, [_-M|T], X):-
 
 %findMostSimilarAlbums(+AlbumId, -SimilarIds, -SimilarNames) 
 findMostSimilarAlbums(AlbumId, SimilarIds, SimilarNames):-
-    findall(X-Y, (albumDistance(AlbumId,Y,X), \+(AlbumId = Y)), Term), keysort(Term, T),
+    findall(X-Y, (albumDistance(AlbumId,Y,X), \+(AlbumId = Y)), Term), msort(Term, T),
     showIDs(SimilarIds, T,0), showAlbumNames(SimilarNames, T,0).
 showAlbumNames([],_, 30).
 showAlbumNames(Result, [_-M|T], X):-
@@ -129,7 +129,7 @@ showAlbumNames(Result, [_-M|T], X):-
 
 %findMostSimilarArtists(+ArtistName, -SimilarArtists)
 findMostSimilarArtists(ArtistName, SimilarArtists):-findall(X-Y, (artistDistance(ArtistName,Y,X),\+(ArtistName = Y) ), Term),
-keysort(Term, T), showIDs(SimilarArtists, T,0).
+msort(Term, T), showIDs(SimilarArtists, T,0).
 
 
 %filterExplicitTracks(+TrackList, -FilteredTracks)
@@ -146,31 +146,32 @@ artistLoop(Result, [H|T]):-
 %discoverPlaylist(+LikedGenres, +DislikedGenres, +Features, +FileName, -Playlist)
 discoverPlaylist(LikedGenres, DislikedGenres, Features,FileName, Playlist):- 
     subGenre(LikedGenres, Other1),subGenre(DislikedGenres, Other2),eliminator(Other1, Other2, Res),
-    list_to_set(Res,Res1),distanceLoop(Res1,Features,Final),keysort(Final,Final2) ,showAll(Playlist,Points,Final2,0),
+    list_to_set(Res,Res1),distanceLoop(Res1,Features,Final),msort(Final,Final2) ,showAll(Playlist,Points,Final2,0),
     nameAndArtist(Names,Artists,Playlist),printPhase(FileName,Playlist,Names,Artists,Points).
-
+%helper for taking the first 30 elements of a list
 showAll([],[],_, 30).
 showAll(Result,Res2 ,[N-M|T], X):-
     Y is X+1, showAll(Ret, Ret2, T,Y), Result = [M|Ret], Res2=[N|Ret2].
+%helper for print phase
 nameAndArtist([],[],[]).
 nameAndArtist(Names, Artists, [H|T]):-
     track(H,X,Y,_,_), nameAndArtist(N1,A1,T), Names = [X|N1], Artists = [Y|A1].
-
+%print phase of the last predicate
 printPhase(File, Ids, Names,Artists,Points):- open(File, write, Stream),
    writeln(Stream, Ids), writeln(Stream,Names), writeln(Stream,Artists),writeln(Stream,Points), close(Stream).
-
+%eliminates all disliked and liked ones among all tracks
 eliminator(Liked,Disliked,Result):-
     findall(X,(
         getTrackGenre(X,Genres),
         (isLiked(Genres,Liked), \+ isLiked(Genres,Disliked))
     ),Result).
-
+%calculates all distances againts a feature set
 distanceLoop([],_,[]).
 distanceLoop([H|T], Features, Result):- track(H,_,_,_,L), distanceLoop(T,Features, Remi),
  filter_features(L,L1), distanceFinder(Rex, Features, L1), Result = [Rex-H|Remi].   
-
+%controls if an element is included in both lists
 isLiked(Genres,Liked):- (member(X,Genres), member(X,Liked)) .
-
+%find all genre types includes substring ones
 subGenre([],_).
 subGenre(Genres, List):-
     findall(L, artist(_,L,_), WholeGenres), flatten(WholeGenres,Flatten),
